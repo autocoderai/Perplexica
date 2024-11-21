@@ -1,16 +1,31 @@
-FROM node:18-slim
+# Build stage
+FROM node:22-slim AS build
 
-WORKDIR /home/perplexica
+ARG USER=node
 
-COPY src /home/perplexica/src
-COPY tsconfig.json /home/perplexica/
-COPY drizzle.config.ts /home/perplexica/
-COPY package.json /home/perplexica/
-COPY yarn.lock /home/perplexica/
+WORKDIR /app
 
-RUN mkdir /home/perplexica/data
+COPY src /app/src
+COPY tsconfig.json /app/
+COPY drizzle.config.ts /app/
+COPY package.json /app/
+COPY yarn.lock /app/
+
+RUN mkdir /app/data
 
 RUN yarn install --frozen-lockfile --network-timeout 600000
 RUN yarn build
+
+# Runtime stage
+FROM node:22-slim
+
+ARG USER=node
+
+WORKDIR /app
+
+COPY --from=build /app /app
+
+RUN chown -R $USER:$USER /app
+USER $USER
 
 CMD ["yarn", "start"]
